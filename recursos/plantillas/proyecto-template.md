@@ -32,6 +32,8 @@
 - **Servicio 1** - [Uso específico]
 
 ## 📁 Estructura de Archivos
+
+```
 proyecto-nombre/
 ├── 📂 datos/
 │   ├── raw/           # Datos originales sin procesar
@@ -52,6 +54,7 @@ proyecto-nombre/
 ├── README.md
 ├── requirements.txt
 └── config.py
+```
 
 ## 📊 Datos Utilizados
 
