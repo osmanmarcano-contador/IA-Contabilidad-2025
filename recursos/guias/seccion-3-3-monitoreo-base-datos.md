@@ -708,3 +708,4 @@ class DatabaseMonitoringSetup {
 }
 
 module.exports = DatabaseMonitoringSetup;
+
