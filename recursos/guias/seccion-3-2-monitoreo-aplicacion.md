@@ -250,3 +250,268 @@ router.get('/metrics', async (req, res) => {
 });
 
 module.exports = router;
+Alertas automáticas
+Sistema de alertas
+javascript// monitoring/alerting.js
+const logger = require('../config/logger');
+const nodemailer = require('nodemailer');
+
+class AlertingSystem {
+  constructor() {
+    this.transporter = nodemailer.createTransporter({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+
+    this.alertThresholds = {
+      memory: 512, // MB
+      cpu: 80, // Porcentaje
+      responseTime: 2000, // ms
+      errorRate: 5 // Porcentaje
+    };
+
+    this.alertCooldown = new Map();
+    this.cooldownPeriod = 5 * 60 * 1000; // 5 minutos
+  }
+
+  async sendAlert(type, message, severity = 'WARNING') {
+    const alertKey = `${type}_${severity}`;
+    
+    // Verificar cooldown
+    if (this.alertCooldown.has(alertKey)) {
+      const lastAlert = this.alertCooldown.get(alertKey);
+      if (Date.now() - lastAlert < this.cooldownPeriod) {
+        return; // Evitar spam de alertas
+      }
+    }
+
+    // Registrar alerta
+    logger.error('Alert triggered', {
+      type,
+      message,
+      severity,
+      timestamp: new Date().toISOString()
+    });
+
+    // Enviar email si está configurado
+    if (process.env.ALERT_EMAIL) {
+      try {
+        await this.transporter.sendMail({
+          from: process.env.SMTP_FROM,
+          to: process.env.ALERT_EMAIL,
+          subject: `[${severity}] Alert: ${type}`,
+          html: `
+            <h3>Alert Triggered</h3>
+            <p><strong>Type:</strong> ${type}</p>
+            <p><strong>Severity:</strong> ${severity}</p>
+            <p><strong>Message:</strong> ${message}</p>
+            <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+            <p><strong>Server:</strong> ${process.env.NODE_ENV}</p>
+          `
+        });
+      } catch (error) {
+        logger.error('Failed to send alert email', error);
+      }
+    }
+
+    // Establecer cooldown
+    this.alertCooldown.set(alertKey, Date.now());
+  }
+
+  checkMemoryUsage() {
+    const memUsage = process.memoryUsage();
+    const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
+
+    if (heapUsedMB > this.alertThresholds.memory) {
+      this.sendAlert(
+        'HIGH_MEMORY_USAGE',
+        `Memory usage: ${Math.round(heapUsedMB)}MB (threshold: ${this.alertThresholds.memory}MB)`,
+        'WARNING'
+      );
+    }
+  }
+
+  checkResponseTime(responseTime, endpoint) {
+    if (responseTime > this.alertThresholds.responseTime) {
+      this.sendAlert(
+        'SLOW_RESPONSE',
+        `Slow response time: ${responseTime}ms on ${endpoint}`,
+        'WARNING'
+      );
+    }
+  }
+
+  checkErrorRate(errorCount, totalRequests) {
+    const errorRate = (errorCount / totalRequests) * 100;
+    
+    if (errorRate > this.alertThresholds.errorRate) {
+      this.sendAlert(
+        'HIGH_ERROR_RATE',
+        `High error rate: ${errorRate.toFixed(2)}% (${errorCount}/${totalRequests})`,
+        'CRITICAL'
+      );
+    }
+  }
+
+  startMonitoring() {
+    // Verificar memoria cada minuto
+    setInterval(() => {
+      this.checkMemoryUsage();
+    }, 60000);
+
+    logger.info('Alerting system started');
+  }
+}
+
+module.exports = AlertingSystem;
+Integración con la aplicación
+javascript// app.js (fragmento de integración)
+const express = require('express');
+const metricsMiddleware = require('./middleware/metricsMiddleware');
+const healthRoutes = require('./routes/health');
+const SystemMonitor = require('./monitoring/systemMonitor');
+const AlertingSystem = require('./monitoring/alerting');
+
+const app = express();
+
+// Inicializar monitoreo
+const systemMonitor = new SystemMonitor();
+const alerting = new AlertingSystem();
+alerting.startMonitoring();
+
+// Middleware de métricas
+app.use(metricsMiddleware);
+
+// Rutas de salud
+app.use('/api', healthRoutes);
+
+// Middleware de manejo de errores con alertas
+app.use((err, req, res, next) => {
+  logger.error('Application error', {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method
+  });
+
+  // Enviar alerta para errores críticos
+  if (err.status >= 500) {
+    alerting.sendAlert(
+      'APPLICATION_ERROR',
+      `Error 500 in ${req.method} ${req.url}: ${err.message}`,
+      'CRITICAL'
+    );
+  }
+
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'production' 
+      ? 'Internal Server Error' 
+      : err.message
+  });
+});
+
+module.exports = app;
+Configuración de variables de entorno
+bash# .env.example
+# Configuración de alertas
+ALERT_EMAIL=admin@tuempresa.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=tu-email@gmail.com
+SMTP_PASS=tu-password-app
+SMTP_FROM=noreply@tuempresa.com
+
+# Métricas y monitoreo
+METRICS_PORT=9090
+HEALTH_CHECK_INTERVAL=30000
+Mejores prácticas para monitoreo
+Métricas clave a monitorear
+
+Métricas de aplicación:
+
+Tiempo de respuesta promedio
+Tasa de errores
+Throughput (requests por segundo)
+Disponibilidad del servicio
+
+
+Métricas de sistema:
+
+Uso de CPU
+Uso de memoria
+Uso de disco
+Conexiones de red
+
+
+Métricas de base de datos:
+
+Tiempo de consulta
+Conexiones activas
+Bloqueos de tablas
+Tamaño de la base de datos
+
+
+
+Dashboard de monitoreo
+javascript// monitoring/dashboard.js
+const express = require('express');
+const router = express.Router();
+const { register } = require('../metrics/appMetrics');
+
+router.get('/dashboard', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Monitoring Dashboard</title>
+      <meta http-equiv="refresh" content="30">
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .metric { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        .status-ok { background-color: #d4edda; }
+        .status-warning { background-color: #fff3cd; }
+        .status-error { background-color: #f8d7da; }
+      </style>
+    </head>
+    <body>
+      <h1>Application Monitoring Dashboard</h1>
+      <div id="metrics">
+        <div class="metric status-ok">
+          <h3>Application Status</h3>
+          <p>Status: <strong>Running</strong></p>
+          <p>Uptime: <strong>${Math.floor(process.uptime())} seconds</strong></p>
+        </div>
+        
+        <div class="metric">
+          <h3>Memory Usage</h3>
+          <p>Heap Used: <strong>${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB</strong></p>
+          <p>Heap Total: <strong>${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)} MB</strong></p>
+        </div>
+        
+        <div class="metric">
+          <h3>Quick Actions</h3>
+          <p><a href="/api/health">Health Check</a></p>
+          <p><a href="/api/health/detailed">Detailed Health Check</a></p>
+          <p><a href="/api/metrics">Prometheus Metrics</a></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+module.exports = router;
+Notas importantes:
+
+Configurar umbrales de alerta apropiados para tu aplicación
+Implementar cooldowns para evitar spam de alertas
+Usar múltiples canales de notificación (email, Slack, etc.)
+Monitorear tanto métricas técnicas como de negocio
+Establecer SLAs claros y monitorear su cumplimiento
+Implementar dashboards visuales para facilitar el monitoreo
+Realizar pruebas regulares del sistema de alertas
