@@ -346,4 +346,114 @@ groups:
     annotations:
       summary: "Slow database queries detected"
       description: "95th percentile query time is {{ $value }} seconds"
-    
+    3.4.5 Dashboard de Grafana
+json{
+  "dashboard": {
+    "title": "Node.js Application Monitoring",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ]
+      },
+      {
+        "title": "Response Time (95th percentile)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          }
+        ]
+      },
+      {
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status_code=~\"5..\"}[5m])",
+            "legendFormat": "5xx errors"
+          }
+        ]
+      },
+      {
+        "title": "Active Connections",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "active_connections",
+            "legendFormat": "Connections"
+          }
+        ]
+      }
+    ]
+  }
+}
+3.4.6 Script de Configuración Automatizada
+bash#!/bin/bash
+# setup-monitoring.sh
+
+echo "=== Configurando Herramientas de Monitoreo ==="
+
+# Instalar dependencias
+echo "Instalando dependencias de monitoreo..."
+npm install newrelic dd-trace prom-client node-statsd --save
+
+# Crear directorio de configuración
+mkdir -p config/monitoring
+mkdir -p logs
+
+# Copiar archivos de configuración
+cp templates/newrelic.js ./
+cp templates/tracer.js ./
+cp templates/metrics.js ./
+
+# Configurar PM2
+echo "Configurando PM2..."
+pm2 install pm2-server-monit
+
+# Crear archivo de configuración de Prometheus
+cat > prometheus.yml << EOF
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'node-app'
+    static_configs:
+      - targets: ['localhost:3000']
+    metrics_path: /metrics
+EOF
+
+echo "=== Configuración de monitoreo completada ==="
+echo "No olvides configurar las variables de entorno:"
+echo "- NEW_RELIC_LICENSE_KEY"
+echo "- DATADOG_API_KEY"
+echo "- DATADOG_HOST"
+3.4.7 Variables de Entorno para Monitoreo
+bash# .env.monitoring
+# New Relic
+NEW_RELIC_LICENSE_KEY=your_license_key_here
+NEW_RELIC_APP_NAME=Production App
+
+# DataDog
+DD_API_KEY=your_datadog_api_key
+DD_SERVICE=production-app
+DD_ENV=production
+DD_VERSION=1.0.0
+DATADOG_HOST=localhost
+DATADOG_PORT=8125
+
+# Prometheus
+PROMETHEUS_PORT=9090
+METRICS_ENDPOINT=/metrics
+
+# General monitoring
+MONITORING_ENABLED=true
+LOG_LEVEL=info
+ALERT_EMAIL=admin@yourcompany.com
+⚠️ IMPORTANTE: Nunca incluyas las claves de API reales en el control de versiones. Utiliza variables de entorno o servicios de gestión de secretos.
