@@ -837,3 +837,235 @@ node ${flags.join(' ')} ${appFile}
         };
     }
 }
+Estrategias de Streaming y Buffers
+Manejo Eficiente de Streams y Buffers:
+javascript// stream-optimization.js
+const { Transform, Readable, Writable } = require('stream');
+const { pipeline } = require('stream/promises');
+
+class StreamOptimizer {
+    constructor() {
+        this.defaultBufferSize = 64 * 1024; // 64KB
+        this.maxBufferSize = 1024 * 1024;   // 1MB
+    }
+
+    // Stream de transformación con control de memoria
+    createMemoryEfficientTransform(transformFn, options = {}) {
+        const bufferSize = options.bufferSize || this.defaultBufferSize;
+        let processedChunks = 0;
+        let totalBytes = 0;
+
+        return new Transform({
+            objectMode: options.objectMode || false,
+            highWaterMark: bufferSize,
+            
+            transform(chunk, encoding, callback) {
+                try {
+                    processedChunks++;
+                    totalBytes += chunk.length || 0;
+                    
+                    // Monitorear uso de memoria cada 1000 chunks
+                    if (processedChunks % 1000 === 0) {
+                        const memUsage = process.memoryUsage();
+                        console.log(`📊 Stream procesado: ${processedChunks} chunks, ${totalBytes} bytes, Heap: ${(memUsage.heapUsed / 1024 / 1024).toFixed(2)}MB`);
+                        
+                        // Forzar GC si es necesario
+                        if (memUsage.heapUsed > 500 * 1024 * 1024 && global.gc) {
+                            global.gc();
+                        }
+                    }
+                    
+                    const result = transformFn(chunk, encoding);
+                    callback(null, result);
+                } catch (error) {
+                    callback(error);
+                }
+            },
+
+            flush(callback) {
+                console.log(`✅ Stream completado: ${processedChunks} chunks, ${totalBytes} bytes procesados`);
+                callback();
+            }
+        });
+    }
+
+    // Procesamiento de archivos grandes con streaming
+    async processLargeFile(inputPath, outputPath, processorFn, options = {}) {
+        const fs = require('fs');
+        const path = require('path');
+        
+        try {
+            const stats = fs.statSync(inputPath);
+            console.log(`📁 Procesando archivo: ${path.basename(inputPath)} (${(stats.size / 1024 / 1024).toFixed(2)}MB)`);
+            
+            const readStream = fs.createReadStream(inputPath, {
+                highWaterMark: options.bufferSize || this.defaultBufferSize
+            });
+            
+            const transformStream = this.createMemoryEfficientTransform(processorFn, options);
+            
+            const writeStream = fs.createWriteStream(outputPath, {
+                highWaterMark: options.bufferSize || this.defaultBufferSize
+            });
+
+            // Usar pipeline para manejo automático de errores y cleanup
+            await pipeline(readStream, transformStream, writeStream);
+            
+            console.log(`✅ Archivo procesado exitosamente: ${outputPath}`);
+            return { success: true, inputSize: stats.size };
+            
+        } catch (error) {
+            console.error(`❌ Error procesando archivo: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // Buffer pool para reutilización
+    createBufferPool(bufferSize = this.defaultBufferSize, poolSize = 10) {
+        const pool = [];
+        const inUse = new Set();
+        
+        // Inicializar pool
+        for (let i = 0; i < poolSize; i++) {
+            pool.push(Buffer.allocUnsafe(bufferSize));
+        }
+        
+        return {
+            acquire: () => {
+                let buffer;
+                if (pool.length > 0) {
+                    buffer = pool.pop();
+                } else {
+                    buffer = Buffer.allocUnsafe(bufferSize);
+                    console.log(`🔄 Creando nuevo buffer (pool agotado)`);
+                }
+                
+                inUse.add(buffer);
+                buffer.fill(0); // Limpiar buffer
+                return buffer;
+            },
+            
+            release: (buffer) => {
+                if (inUse.has(buffer)) {
+                    inUse.delete(buffer);
+                    pool.push(buffer);
+                    return true;
+                }
+                return false;
+            },
+            
+            stats: () => ({
+                available: pool.length,
+                inUse: inUse.size,
+                total: pool.length + inUse.size
+            })
+        };
+    }
+
+    // Stream de lectura con backpressure control
+    createBackpressureControlledStream(dataSource, options = {}) {
+        let index = 0;
+        const batchSize = options.batchSize || 100;
+        const maxMemoryUsage = options.maxMemoryUsage || 100 * 1024 * 1024; // 100MB
+        
+        return new Readable({
+            objectMode: true,
+            highWaterMark: options.highWaterMark || 16,
+            
+            read() {
+                // Verificar uso de memoria antes de continuar
+                const memUsage = process.memoryUsage();
+                if (memUsage.heapUsed > maxMemoryUsage) {
+                    console.log(`⏸️  Pausando stream por alto uso de memoria: ${(memUsage.heapUsed / 1024 / 1024).toFixed(2)}MB`);
+                    
+                    // Pausar brevemente para permitir GC
+                    setTimeout(() => {
+                        this._continueReading();
+                    }, 100);
+                    return;
+                }
+                
+                this._continueReading();
+            },
+            
+            _continueReading() {
+                try {
+                    const batch = dataSource.slice(index, index + batchSize);
+                    
+                    if (batch.length === 0) {
+                        this.push(null); // Fin del stream
+                        return;
+                    }
+                    
+                    index += batch.length;
+                    this.push(batch);
+                    
+                } catch (error) {
+                    this.destroy(error);
+                }
+            }
+        });
+    }
+
+    // Análisis de uso de memoria en streams
+    createMemoryAnalysisStream() {
+        let chunkCount = 0;
+        let byteCount = 0;
+        const memorySnapshots = [];
+        
+        return new Transform({
+            objectMode: false,
+            
+            transform(chunk, encoding, callback) {
+                chunkCount++;
+                byteCount += chunk.length;
+                
+                // Tomar snapshot de memoria cada 100 chunks
+                if (chunkCount % 100 === 0) {
+                    const memUsage = process.memoryUsage();
+                    memorySnapshots.push({
+                        chunk: chunkCount,
+                        bytes: byteCount,
+                        heapUsed: memUsage.heapUsed,
+                        heapTotal: memUsage.heapTotal,
+                        timestamp: Date.now()
+                    });
+                    
+                    // Mantener solo los últimos 10 snapshots
+                    if (memorySnapshots.length > 10) {
+                        memorySnapshots.shift();
+                    }
+                    
+                    // Detectar crecimiento anómalo
+                    if (memorySnapshots.length > 1) {
+                        const current = memorySnapshots[memorySnapshots.length - 1];
+                        const previous = memorySnapshots[memorySnapshots.length - 2];
+                        const growth = current.heapUsed - previous.heapUsed;
+                        
+                        if (growth > 10 * 1024 * 1024) { // 10MB de crecimiento
+                            console.warn(`⚠️  Crecimiento de memoria detectado: ${(growth / 1024 / 1024).toFixed(2)}MB`);
+                        }
+                    }
+                }
+                
+                callback(null, chunk);
+            },
+            
+            flush(callback) {
+                console.log(`📊 Análisis de memoria del stream completado:`);
+                console.log(`   - Chunks procesados: ${chunkCount}`);
+                console.log(`   - Bytes procesados: ${byteCount}`);
+                console.log(`   - Snapshots de memoria: ${memorySnapshots.length}`);
+                
+                if (memorySnapshots.length > 0) {
+                    const lastSnapshot = memorySnapshots[memorySnapshots.length - 1];
+                    console.log(`   - Memoria final: ${(lastSnapshot.heapUsed / 1024 / 1024).toFixed(2)}MB`);
+                }
+                
+                callback();
+            }
+        });
+    }
+}
+
+module.exports = StreamOptimizer;
