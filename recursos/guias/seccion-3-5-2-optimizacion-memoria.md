@@ -1069,3 +1069,236 @@ class StreamOptimizer {
 }
 
 module.exports = StreamOptimizer;
+Implementación Práctica
+Configuración de Optimización de Memoria en Express:
+javascript// app-memory-optimization.js
+const express = require('express');
+const MemoryAnalyzer = require('./memory-analyzer');
+const DataOptimizer = require('./data-optimization');
+const MemoryLeakDetector = require('./memory-leak-detector');
+const MemoryLimitsManager = require('./memory-limits');
+const StreamOptimizer = require('./stream-optimization');
+
+class OptimizedExpressApp {
+    constructor() {
+        this.app = express();
+        this.memoryAnalyzer = new MemoryAnalyzer();
+        this.dataOptimizer = new DataOptimizer();
+        this.leakDetector = new MemoryLeakDetector();
+        this.limitsManager = new MemoryLimitsManager();
+        this.streamOptimizer = new StreamOptimizer();
+        
+        this.setupMemoryOptimization();
+    }
+
+    setupMemoryOptimization() {
+        // Configurar límites de memoria
+        this.limitsManager.setupMemoryAlerts({
+            warning: 70,
+            critical: 85,
+            extreme: 95
+        });
+
+        // Iniciar detección de memory leaks
+        this.leakDetector.startMonitoring();
+
+        // Iniciar monitoreo de memoria
+        this.memoryAnalyzer.startMemoryMonitoring(30000); // cada 30 segundos
+
+        // Configurar middleware de optimización
+        this.setupOptimizationMiddleware();
+
+        // Configurar endpoints de monitoreo
+        this.setupMonitoringEndpoints();
+
+        // Configurar manejo de eventos críticos
+        this.setupCriticalEventHandlers();
+    }
+
+    setupOptimizationMiddleware() {
+        // Middleware para comprimir respuestas
+        const compression = require('compression');
+        this.app.use(compression({
+            threshold: 1024,
+            level: 6,
+            memLevel: 8
+        }));
+
+        // Middleware para límite de tamaño de request
+        this.app.use(express.json({ 
+            limit: '10mb',
+            verify: (req, res, buf) => {
+                // Monitorear tamaño de requests
+                if (buf.length > 5 * 1024 * 1024) { // 5MB
+                    console.warn(`⚠️  Request grande recibido: ${(buf.length / 1024 / 1024).toFixed(2)}MB`);
+                }
+            }
+        }));
+
+        // Middleware de monitoreo de memoria por request
+        this.app.use((req, res, next) => {
+            const startMemory = process.memoryUsage().heapUsed;
+            const startTime = Date.now();
+
+            res.on('finish', () => {
+                const endMemory = process.memoryUsage().heapUsed;
+                const endTime = Date.now();
+                const memoryDelta = endMemory - startMemory;
+                const duration = endTime - startTime;
+
+                // Log requests que consumen mucha memoria
+                if (memoryDelta > 10 * 1024 * 1024) { // 10MB
+                    console.warn(`⚠️  Request con alto uso de memoria: ${req.method} ${req.path}`);
+                    console.warn(`   - Memoria: ${(memoryDelta / 1024 / 1024).toFixed(2)}MB`);
+                    console.warn(`   - Duración: ${duration}ms`);
+                }
+            });
+
+            next();
+        });
+    }
+
+    setupMonitoringEndpoints() {
+        // Endpoint para estadísticas de memoria
+        this.app.get('/health/memory', (req, res) => {
+            const stats = this.memoryAnalyzer.getMemoryStats();
+            const limits = this.limitsManager.monitorMemoryLimits();
+            const leakReport = this.leakDetector.generateLeakReport();
+
+            res.json({
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                memory: stats,
+                limits: limits,
+                leaks: leakReport,
+                recommendations: this.getOptimizationRecommendations()
+            });
+        });
+
+        // Endpoint para crear heap snapshot
+        this.app.post('/admin/heap-snapshot', (req, res) => {
+            try {
+                const filename = `manual-snapshot-${Date.now()}`;
+                const snapshotPath = this.memoryAnalyzer.createHeapSnapshot(filename);
+                
+                res.json({
+                    success: true,
+                    snapshot: snapshotPath,
+                    message: 'Heap snapshot creado exitosamente'
+                });
+            } catch (error) {
+                res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+
+        // Endpoint para forzar garbage collection
+        this.app.post('/admin/gc', (req, res) => {
+            if (global.gc) {
+                const before = process.memoryUsage();
+                global.gc();
+                const after = process.memoryUsage();
+                
+                res.json({
+                    success: true,
+                    before: before,
+                    after: after,
+                    freed: before.heapUsed - after.heapUsed
+                });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    message: 'Garbage collection no disponible. Ejecute con --expose-gc'
+                });
+            }
+        });
+    }
+
+    setupCriticalEventHandlers() {
+        // Manejar memoria crítica
+        process.on('criticalMemoryUsage', (stats) => {
+            console.error('🚨 MEMORIA CRÍTICA - Tomando acciones de emergencia');
+            
+            // Crear heap snapshot para análisis
+            const filename = `critical-snapshot-${Date.now()}`;
+            this.memoryAnalyzer.createHeapSnapshot(filename);
+            
+            // Limpiar caches si existen
+            if (this.clearCaches) {
+                this.clearCaches();
+            }
+        });
+
+        // Manejar memoria extrema
+        process.on('extremeMemoryUsage', () => {
+            console.error('🚨 MEMORIA EXTREMA - Preparando para reinicio graceful');
+            
+            // Implementar reinicio graceful aquí
+            // Por ejemplo, dejar de aceptar nuevas conexiones
+            // y esperar a que terminen las existentes
+        });
+
+        // Manejar detección de memory leaks
+        this.leakDetector.on('memoryLeak', (leak) => {
+            console.error(`🚨 Memory leak detectado: ${leak.type}`);
+            console.error(`   Detalles:`, leak);
+            
+            // Enviar alerta (email, Slack, etc.)
+            this.sendMemoryLeakAlert(leak);
+        });
+    }
+
+    getOptimizationRecommendations() {
+        const memStats = this.memoryAnalyzer.getMemoryStats();
+        const recommendations = [];
+
+        const heapUsedMB = this.memoryAnalyzer.parseBytes(memStats.heapUsed);
+        
+        if (heapUsedMB > 1000) { // 1GB
+            recommendations.push({
+                priority: 'high',
+                message: 'Considere implementar clustering para distribuir carga de memoria',
+                action: 'cluster'
+            });
+        }
+
+        if (heapUsedMB > 500) { // 500MB
+            recommendations.push({
+                priority: 'medium',
+                message: 'Revisar implementación de caches y object pooling',
+                action: 'cache_optimization'
+            });
+        }
+
+        return recommendations;
+    }
+
+    sendMemoryLeakAlert(leak) {
+        // Implementar envío de alertas
+        // Ejemplo: enviar email, notificación Slack, etc.
+        console.log('📧 Enviando alerta de memory leak...');
+    }
+
+    clearCaches() {
+        // Implementar limpieza de caches de la aplicación
+        console.log('🧹 Limpiando caches de aplicación...');
+    }
+
+    start(port = 3000) {
+        this.app.listen(port, () => {
+            console.log(`🚀 Aplicación optimizada iniciada en puerto ${port}`);
+            console.log(`📊 Monitoreo de memoria activo`);
+            console.log(`🔍 Detección de memory leaks activa`);
+        });
+    }
+}
+
+module.exports = OptimizedExpressApp;
+
+// Ejemplo de uso
+if (require.main === module) {
+    const app = new OptimizedExpressApp();
+    app.start();
+}
