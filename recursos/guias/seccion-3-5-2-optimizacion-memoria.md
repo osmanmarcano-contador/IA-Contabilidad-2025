@@ -666,3 +666,174 @@ class MemoryLeakDetector extends EventEmitter {
 }
 
 module.exports = MemoryLeakDetector;
+Configuración de Límites de Memoria
+Configuración de Node.js y V8:
+javascript// memory-limits.js
+class MemoryLimitsManager {
+    constructor() {
+        this.defaultLimits = {
+            maxOldSpaceSize: 4096, // 4GB
+            maxSemiSpaceSize: 256,  // 256MB
+            maxExecutableSize: 256  // 256MB
+        };
+    }
+
+    // Configurar límites de memoria para V8
+    configureV8Limits(options = {}) {
+        const limits = { ...this.defaultLimits, ...options };
+        
+        console.log('⚙️  Configurando límites de memoria V8:');
+        console.log(`   - Max Old Space Size: ${limits.maxOldSpaceSize}MB`);
+        console.log(`   - Max Semi Space Size: ${limits.maxSemiSpaceSize}MB`);
+        console.log(`   - Max Executable Size: ${limits.maxExecutableSize}MB`);
+
+        // Estos límites deben configurarse al iniciar Node.js
+        // Ejemplo: node --max-old-space-size=4096 --max-semi-space-size=256 app.js
+        
+        return {
+            nodeFlags: [
+                `--max-old-space-size=${limits.maxOldSpaceSize}`,
+                `--max-semi-space-size=${limits.maxSemiSpaceSize}`,
+                `--max-executable-size=${limits.maxExecutableSize}`,
+                '--optimize-for-size',
+                '--gc-interval=100'
+            ],
+            limits
+        };
+    }
+
+    // Monitorear límites de memoria
+    monitorMemoryLimits() {
+        const heapStats = require('v8').getHeapStatistics();
+        const memUsage = process.memoryUsage();
+        
+        const limits = {
+            heapSizeLimit: heapStats.heap_size_limit,
+            totalHeapSize: heapStats.total_heap_size,
+            usedHeapSize: heapStats.used_heap_size,
+            totalAvailableSize: heapStats.total_available_size
+        };
+
+        const usage = {
+            heapUsagePercent: (memUsage.heapUsed / limits.heapSizeLimit * 100).toFixed(2),
+            totalUsagePercent: (heapStats.total_heap_size / limits.heapSizeLimit * 100).toFixed(2),
+            availableMemory: limits.totalAvailableSize,
+            criticalLevel: memUsage.heapUsed > (limits.heapSizeLimit * 0.9)
+        };
+
+        if (usage.criticalLevel) {
+            console.error(`🚨 CRÍTICO: Uso de memoria cerca del límite (${usage.heapUsagePercent}%)`);
+            this.handleCriticalMemoryUsage();
+        }
+
+        return { limits, usage, memUsage };
+    }
+
+    // Manejar uso crítico de memoria
+    handleCriticalMemoryUsage() {
+        console.log('🚨 Ejecutando acciones de emergencia por memoria crítica...');
+        
+        // Limpiar caches
+        if (global.gc) {
+            global.gc();
+            console.log('✅ Garbage collection ejecutado');
+        }
+        
+        // Emitir evento para que la aplicación pueda tomar acciones
+        process.emit('criticalMemoryUsage', this.monitorMemoryLimits());
+        
+        // En casos extremos, considerar restart graceful
+        if (process.memoryUsage().heapUsed > (require('v8').getHeapStatistics().heap_size_limit * 0.95)) {
+            console.error('🚨 Memoria extremadamente crítica. Considere reinicio de aplicación.');
+            process.emit('extremeMemoryUsage');
+        }
+    }
+
+    // Configurar alertas de memoria
+    setupMemoryAlerts(thresholds = {}) {
+        const config = {
+            warning: thresholds.warning || 70,  // 70%
+            critical: thresholds.critical || 85, // 85%
+            extreme: thresholds.extreme || 95    // 95%
+        };
+
+        setInterval(() => {
+            const stats = this.monitorMemoryLimits();
+            const usagePercent = parseFloat(stats.usage.heapUsagePercent);
+
+            if (usagePercent >= config.extreme) {
+                console.error(`🚨 EXTREMO: Uso de memoria ${usagePercent}%`);
+                this.handleCriticalMemoryUsage();
+            } else if (usagePercent >= config.critical) {
+                console.error(`🚨 CRÍTICO: Uso de memoria ${usagePercent}%`);
+            } else if (usagePercent >= config.warning) {
+                console.warn(`⚠️  ADVERTENCIA: Uso de memoria ${usagePercent}%`);
+            }
+        }, 30000); // Verificar cada 30 segundos
+    }
+
+    // Optimizar configuración de garbage collection
+    optimizeGarbageCollection() {
+        const gcConfig = {
+            // Configuraciones recomendadas para producción
+            nodeFlags: [
+                '--gc-interval=100',           // Intervalo de GC
+                '--optimize-for-size',         // Optimizar para tamaño
+                '--always-compact',            // Siempre compactar
+                '--trace-gc',                  // Rastrear GC (solo para debugging)
+                '--trace-gc-verbose'           // GC verbose (solo para debugging)
+            ],
+            
+            // Configuración de generaciones
+            generations: {
+                young: {
+                    maxSize: '64MB',
+                    description: 'Objetos de corta duración'
+                },
+                old: {
+                    maxSize: '4GB',
+                    description: 'Objetos de larga duración'
+                }
+            }
+        };
+
+        console.log('🗑️  Configuración de Garbage Collection optimizada');
+        return gcConfig;
+    }
+
+    // Generar script de inicio optimizado
+    generateOptimizedStartScript(appFile = 'app.js', options = {}) {
+        const limits = this.configureV8Limits(options);
+        const gcConfig = this.optimizeGarbageCollection();
+        
+        const flags = [
+            ...limits.nodeFlags,
+            ...gcConfig.nodeFlags.filter(flag => !flag.includes('trace')) // Remover traces para producción
+        ];
+
+        const script = `#!/bin/bash
+# Script de inicio optimizado para memoria
+# Generado automáticamente
+
+export NODE_ENV=production
+export UV_THREADPOOL_SIZE=16
+
+# Configuración de memoria optimizada
+node ${flags.join(' ')} ${appFile}
+`;
+
+        console.log('📝 Script de inicio optimizado generado:');
+        console.log(script);
+        
+        return {
+            script,
+            flags,
+            recommendations: [
+                'Usar --expose-gc en desarrollo para testing manual de GC',
+                'Monitorear regularmente el uso de memoria en producción',
+                'Ajustar límites según el hardware disponible',
+                'Considerar clustering para aplicaciones de alta carga'
+            ]
+        };
+    }
+}
