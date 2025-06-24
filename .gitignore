@@ -1,0 +1,381 @@
+# ========================================
+# .gitignore para Proyecto IA-Contabilidad-2025
+# Optimizado para Python, Machine Learning y APIs
+# ========================================
+
+# ==========================================
+# INFORMACIÓN SENSIBLE - CRÍTICO PARA MÓDULO 4
+# ==========================================
+
+# API Keys y Configuraciones Sensibles
+config.py
+api_keys.py
+.env
+.env.local
+.env.production
+secrets.json
+credentials.json
+
+# Archivos de configuración de APIs específicas
+kaggle.json
+alpha_vantage_key.txt
+news_api_key.txt
+twitter_api_credentials.json
+
+# Certificados y claves privadas
+*.pem
+*.key
+*.crt
+*.p12
+
+# ==========================================
+# PYTHON Y ENTORNO VIRTUAL
+# ==========================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ==========================================
+# MACHINE LEARNING Y DATA SCIENCE
+# ==========================================
+
+# Datasets grandes (usar Git LFS si es necesario)
+*.csv
+*.json
+*.xlsx
+*.xls
+*.parquet
+*.h5
+*.hdf5
+*.pickle
+*.pkl
+
+# Modelos entrenados
+*.model
+*.joblib
+*.sav
+models/
+trained_models/
+checkpoints/
+
+# Tensorboard logs
+logs/
+tensorboard_logs/
+
+# MLflow
+mlruns/
+
+# ==========================================
+# JUPYTER NOTEBOOKS - CONFIGURACIÓN ESPECÍFICA
+# ==========================================
+
+# Checkpoints de Jupyter
+.ipynb_checkpoints/
+
+# Archivos temporales de Jupyter
+*-checkpoint.ipynb
+
+# Jupyter Notebook metadata (opcional - descomenta si quieres versionar sin metadata)
+# *.ipynb
+
+# ==========================================
+# HERRAMIENTAS DE DESARROLLO
+# ==========================================
+
+# Visual Studio Code
+.vscode/
+.history/
+
+# PyCharm
+.idea/
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Atom
+.atom/
+
+# ==========================================
+# SISTEMAS OPERATIVOS
+# ==========================================
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ==========================================
+# ARCHIVOS DE APLICACIÓN WEB - MÓDULO 6
+# ==========================================
+
+# Streamlit
+.streamlit/
+
+# Flask
+instance/
+
+# Node modules (si usas JavaScript)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================
+# ARCHIVOS DE BACKUP Y TEMPORALES
+# ==========================================
+
+# Backups
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+*~
+
+# Archivos de sistema temporales
+.cache/
+.temp/
+temp/
+tmp/
+
+# ==========================================
+# DOCUMENTOS Y ARCHIVOS PERSONALES
+# ==========================================
+
+# Documentos Word/Excel de trabajo
+*.docx
+*.doc
+*.pptx
+*.ppt
+# Excepciones: mantener documentación oficial
+!README.md
+!DOCUMENTATION.md
+!LICENSE.md
+
+# Notas personales
+notas_personales/
+borradores/
+pruebas/
+
+# Screenshots y imágenes de trabajo
+screenshots/
+capturas/
+*.png
+*.jpg
+*.jpeg
+*.gif
+# Excepciones: imágenes del README
+!images/
+!docs/images/
+
+# ==========================================
+# LOGS Y ARCHIVOS DE MONITOREO
+# ==========================================
+
+# Logs generales
+*.log
+logs/
+log/
+
+# Archivos de error
+error.txt
+errors/
+
+# ==========================================
+# HERRAMIENTAS ESPECÍFICAS PARA EL PROYECTO
+# ==========================================
+
+# Archivos de configuración local de Heroku
+.heroku/
+
+# Archivos de Google Cloud
+gcloud/
+.gcp/
+
+# Archivos de configuración de Docker (si se usa más adelante)
+.dockerignore
+docker-compose.override.yml
+
+# ==========================================
+# EXCEPCIONES IMPORTANTES
+# ==========================================
+
+# Mantener estructura de carpetas vacías
+!.gitkeep
+
+# Mantener archivos de configuración de ejemplo
+!config.example.py
+!.env.example
+
+# Mantener documentación
+!docs/
+!README.md
+!LICENSE
+
+# ==========================================
+# NOTAS IMPORTANTES:
+# 
+# 1. NUNCA subir API keys al repositorio
+# 2. Usar variables de entorno para configuraciones sensibles
+# 3. Para datasets grandes, considerar Git LFS
+# 4. Revisar este archivo antes de cada commit importante
+# 5. Actualizar según nuevas herramientas que se agreguen
+# ==========================================
