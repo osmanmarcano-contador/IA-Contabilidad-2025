@@ -1,7 +1,7 @@
 # 🤖 IA-Contabilidad-2025
 ## Programa de Especialización en Inteligencia Artificial para Contadores Públicos
 
-> **Programa diseñado por Geoffrey Hinton | Junio 2025**  
+> **Programa diseñado con la asistencia y orientación de Geoffrey Hinton | Junio 2025**  
 > Transformando contadores tradicionales en profesionales con competencias avanzadas en IA aplicada
 
 ---
