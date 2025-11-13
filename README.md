@@ -8,15 +8,14 @@
 
 ## 📋 Descripción del Programa
 
-Este repositorio documenta mi progreso en un programa intensivo de 20 semanas que combina fundamentos de Inteligencia Artificial, programación en Python, Machine Learning y aplicaciones especializadas para el sector contable e inmobiliario.
+Este repositorio documenta mi progreso en un programa intensivo de 42 semanas que combina fundamentos de Inteligencia Artificial, programación en Python, Machine Learning y aplicaciones especializadas para el sector contable e inmobiliario.
 
 ### 🎯 Objetivo Principal
 Desarrollar competencias técnicas avanzadas en IA que permitan revolucionar la práctica contable tradicional mediante:
-- Automatización de procesos contables
-- Análisis predictivo de datos financieros
-- Detección de fraudes y anomalías
-- Optimización de auditorías
-- Consultoría especializada en IA para sector inmobiliario
+- Automatización de procedimientos contables que permitan reducir tiempo de proceso manual hasta en un 60%
+- Análisis predictivo de datos financieros que permitan reducir procesos de cálculo hasta en un 40%
+- Detección de fraudes y anomalías que permitan reducir procedimientos de  selección de pruebas y muestreo en un 50%
+- Consultoría especializada en IA para el sector contable, auditoría e inmobiliaria que permiten dinamizar procesos tradicionales
 
 ---
 
